@@ -126,7 +126,9 @@ export default function App() {
       console.error("Failed to load sources:", error);
 
       setError(
-        "Could not load source connectors. Make sure the backend is running on port 8000."
+        error instanceof Error
+          ? error.message
+          : "Could not load source connectors. Check the backend API configuration."
       );
     } finally {
       setLoadingSources(false);

@@ -1,18 +1,34 @@
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:8000";
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const API_URL = configuredApiUrl
+  ? configuredApiUrl.replace(/\/+$/, "")
+  : import.meta.env.DEV
+    ? "http://localhost:8000"
+    : "";
 
 async function request<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    },
-    ...options,
-  });
+  if (!API_URL) {
+    throw new Error(
+      "The backend API URL is not configured. Set VITE_API_URL to your public backend URL in the Vercel project settings, then redeploy."
+    );
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers || {}),
+      },
+      ...options,
+    });
+  } catch {
+    throw new Error(
+      `Could not reach the backend at ${API_URL}. Check that it is publicly available and allows this site's origin in CORS.`
+    );
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
