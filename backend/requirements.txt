@@ -5,6 +5,4 @@ psycopg[binary]
 pgvector
 pydantic-settings
 httpx
-celery
-redis
 python-multipart
