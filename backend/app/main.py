@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from sqlalchemy.orm import Session
 from .core.config import settings
 from .db import Base, engine, get_db
@@ -8,6 +8,9 @@ from .models import Project, SearchRun, NormalizedDocument, Lead, Source
 from .schemas import ProjectCreate, ProjectOut, SearchCreate, SearchOut, ResultOut
 from .connectors.registry import CONNECTORS
 from .worker import run_search
+
+with engine.begin() as conn:
+    conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
 Base.metadata.create_all(bind=engine)
 
@@ -45,7 +48,12 @@ def list_projects(db: Session = Depends(get_db)):
     return list(db.scalars(select(Project).order_by(Project.created_at.desc())))
 
 @app.post("/api/projects/{project_id}/search", response_model=SearchOut)
-def create_search(project_id: str, payload: SearchCreate, db: Session = Depends(get_db)):
+def create_search(
+    project_id: str,
+    payload: SearchCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(404, "Project not found")
@@ -55,7 +63,7 @@ def create_search(project_id: str, payload: SearchCreate, db: Session = Depends(
     db.commit()
     db.refresh(search)
 
-    task = run_search.delay(project_id, search.id, payload.query, payload.depth)
+    background_tasks.add_task(run_search, project_id, search.id, payload.query, payload.depth)
     return search
 
 @app.get("/api/projects/{project_id}/results", response_model=list[ResultOut])

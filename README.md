@@ -50,6 +50,9 @@ npm run dev
 
 Open http://localhost:5173
 
+## Production deployment
+The Vercel frontend needs a separately hosted backend; the API, PostgreSQL, Redis, and Celery worker are not deployed by Vercel with this frontend. Set the Vercel project environment variable `VITE_API_URL` to the backend's public HTTPS origin (for example, `https://api.example.com`, without `/api`), then redeploy. Configure the backend's `CORS_ORIGINS` to include `https://opportunity-finder-azure-mu.vercel.app` and any Vercel preview origins you use. Verify the backend is reachable at `/health` and `/api/sources` before testing research.
+
 ## V1 flow
 Project -> Search configuration -> query expansion -> connectors -> normalization -> deduplication -> relevance/intent -> evidence -> dashboard.
 
